@@ -1,0 +1,15 @@
+# Default values for redis-cluster.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+#
+# リージョンとゾーンの設定
+#   Redisサーバーを、同じリージョン内の3つのゾーンに配置するため
+#   regionとzoneA〜zoneCを設定する。
+#
+
+global:
+  region: jp-tok
+  zoneA: tok02
+  zoneB: tok04
+  zoneC: tok05
+

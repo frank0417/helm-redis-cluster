@@ -1,0 +1,82 @@
+#
+# {{ .Release.Name }}
+#
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.global.zoneA }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: local-storage
+  selector:
+    matchLabels:
+      vol: {{ .Release.Name }}-{{ .Values.global.zoneA }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.global.zoneA }}
+  labels:
+    vol: {{ .Release.Name }}-{{ .Values.global.zoneA }}
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /mnt
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: failure-domain.beta.kubernetes.io/zone
+          operator: In
+          values:
+          - {{ .Values.global.zoneA }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: setup-{{ .Release.Name }}-{{ .Values.global.zoneA }}
+spec:
+  restartPolicy: Never
+  nodeSelector:
+    failure-domain.beta.kubernetes.io/zone: {{ .Values.global.zoneA }}
+  containers:
+  - name: local-pv-setup
+    image: busybox:1.28
+    command: ['sh', '-c', 'ls -al /data']
+    volumeMounts:
+    - mountPath: /data
+      name: local-pvc-0
+  initContainers:
+  - name: init1
+    image: busybox:1.28
+    command: [ 'sh', '-c','TGTDIR=/data/redis-{{ .Release.Name }}-0; if [ -d $TGTDIR ]; then echo exist; else mkdir $TGTDIR; fi' ] 
+    volumeMounts:
+    - mountPath: /data
+      name: local-pvc-0
+  - name: init2
+    image: busybox:1.28
+    command: [ 'sh', '-c','TGTDIR=/data/redis-{{ .Release.Name }}-1; if [ -d $TGTDIR ]; then echo exist; else mkdir $TGTDIR; fi' ] 
+    volumeMounts:
+    - mountPath: /data
+      name: local-pvc-0
+  - name: init3
+    image: busybox:1.28
+    command: [ 'sh', '-c','TGTDIR=/data/redis-{{ .Release.Name }}-2; if [ -d $TGTDIR ]; then echo exist; else mkdir $TGTDIR; fi' ]     
+    volumeMounts:
+    - mountPath: /data
+      name: local-pvc-0
+  volumes:
+    - name: local-pvc-0
+      persistentVolumeClaim:
+        claimName: {{ .Release.Name }}-{{ .Values.global.zoneA }}
